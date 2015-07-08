@@ -49,6 +49,7 @@ class Application:
             time.sleep(LOADING_TIME)
 
     def receivingThread(self):
+        """Thread that handles receiving messages"""
         logging.debug('starting receiving thread')
         while True:
             logging.debug('next iteration of receiving thread')
@@ -64,8 +65,6 @@ class Application:
                 self.addSubscriber(response['message']['from']['id'])
             elif response['message']['text'] == "/unsubscribe":
                 self.removeSubscriber(response['message']['from']['id'])
-            elif response['message']['text'] == "/help":
-                self.help(response['message']['from']['id'])
             elif response['message']['text'] == "/last":
                 self.showLast(response['message']['from']['id'])
 
@@ -118,25 +117,6 @@ class Connection:
         response = connection.getresponse()
         content = response.read().decode('utf-8')
         return content
-
-
-class Receive:
-    """Thread that handles receiving messages"""
-
-    def __init__(self, telegram):
-        logging.debug('initialize receiving thread')
-        threading.Thread.__init__(self)
-        self.telegram = telegram
-        self.run()
-
-    def run(self):
-        """Run thread that handles receiving messages from user"""
-        logging.debug('starting receiving thread')
-        while True:
-            logging.debug('next iteration of receiving thread')
-            time.sleep(RECEIVING_TIME)
-            if self.telegram.checkOnline():
-                self.telegram.update()
 
 
 class Telegram:
