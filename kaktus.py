@@ -6,24 +6,23 @@ import urllib.request
 import socket
 import re
 import logging
-import json
-import threading
 import signal
+from json import JSONDecoder
+from threading import Thread
 
 DEBUG = False
 LOADING_TIME = 60*30
 RECEIVING_TIME = 2
-TOKEN = "*********************************************"
 
 
 class Application:
 
     def __init__(self):
-        self.telegram = Telegram(self)
+        self.bot = Telegram(" --- YOUR TELEGRAM BOT TOKEN --- ")
         self.subscribers = Subscribers()
         self.article = Article()
         # start receiving thread
-        self.threading = threading.Thread(target=self.receivingThread)
+        self.threading = Thread(target=self.receivingThread)
         logging.debug('setting thread as daemon')
         self.threading.daemon = True
         logging.debug('starting thread as daemon')
@@ -43,9 +42,9 @@ class Application:
                 + result.group(3)
             logging.debug('loaded article: "' + loadedArticle + '"')
             if self.article.new(loadedArticle):
-                self.article.update(loadedArticle)
+                self.article.updateArticle(loadedArticle)
                 for subscriber in self.subscribers.subscribersList():
-                    self.telegram.sendMessage(int(subscriber), loadedArticle)
+                    self.bot.sendMessage(int(subscriber), loadedArticle)
             time.sleep(LOADING_TIME)
 
     def receivingThread(self):
@@ -54,54 +53,51 @@ class Application:
         while True:
             logging.debug('next iteration of receiving thread')
             time.sleep(RECEIVING_TIME)
-            if self.telegram.checkOnline():
-                self.telegram.update()
+            if self.bot.checkOnline():
+                response = self.bot.update()
+                if response is not None:
+                    self.interpret(response)
 
     def interpret(self, response):
         """From response recognize which action should be done"""
         logging.debug('interpreting response: ' + str(response))
-        if 'text' in response['message'].keys():
-            if response['message']['text'] == "/subscribe":
-                self.addSubscriber(response['message']['from']['id'])
-            elif response['message']['text'] == "/unsubscribe":
-                self.removeSubscriber(response['message']['from']['id'])
-            elif response['message']['text'] == "/last":
-                self.showLast(response['message']['from']['id'])
+        for message in response:
+            if 'text' in message['message'].keys():
+                if message['message']['text'] == "/subscribe":
+                    self.addSubscriber(message['message']['from']['id'])
+                elif message['message']['text'] == "/unsubscribe":
+                    self.removeSubscriber(message['message']['from']['id'])
+                elif message['message']['text'] == "/last":
+                    self.showLast(message['message']['from']['id'])
 
     def addSubscriber(self, userId):
         """Add new subscriber to list"""
         if self.subscribers.add(userId):
-            self.telegram.sendMessage(
+            self.bot.sendMessage(
                 userId,
                 "You're now subscribing news from Kaktus operator")
         else:
-            self.telegram.sendMessage(
+            self.bot.sendMessage(
                 userId,
                 "You are already subscribing news from Kaktus operator")
 
     def removeSubscriber(self, userId):
         """Remove subscriber from list"""
         if self.subscribers.remove(userId):
-            self.telegram.sendMessage(
+            self.bot.sendMessage(
                 userId,
                 "You were removed from subscribing news from Kaktus operator")
         else:
-            self.telegram.sendMessage(
+            self.bot.sendMessage(
                 userId,
                 "You weren't subscribing news from Kaktus operator")
 
     def showLast(self, userId):
         """Show newest article"""
         if self.article.lastArticle() != '':
-            self.telegram.sendMessage(userId, self.article.lastArticle())
+            self.bot.sendMessage(userId, self.article.lastArticle())
         else:
-            self.telegram.sendMessage(userId, "No articles loaded yet.")
-
-    def help(self, userId):
-        """Send help message with available commands to user"""
-        # TODO: write help message
-        helpMessage = ""
-        self.telegram.sendMessage(userId, helpMessage)
+            self.bot.sendMessage(userId, "No articles loaded yet.")
 
 
 class Connection:
@@ -121,44 +117,47 @@ class Connection:
 
 class Telegram:
 
-    def __init__(self, application):
-        self.app = application
+    def __init__(self, token):
         self.lastUpdatedId = 0
-        self.apiUrl = 'https://api.telegram.org/bot' + TOKEN + '/'
+        self.apiUrl = 'https://api.telegram.org/bot' + token + '/'
 
     def checkOnline(self):
         """From response decides if Bot connection with server is working"""
-        response = self.sendRequest("getMe")
-        return json.JSONDecoder().decode(response)['ok']
+        return self.sendRequest("getMe")['ok']
 
     def update(self):
-        """Load last messages sent to Bot"""
-        updates = self.sendRequest("getUpdates", offset=self.lastUpdatedId)
-        messages = json.JSONDecoder().decode(updates)
+        """Load last messages sent to Bot, returns array with new messages"""
+        messages = self.sendRequest("getUpdates", offset=self.lastUpdatedId)
         logging.debug('loaded ' + str(len(messages)) + ' messages in update')
         updatedId = messages['result'][len(messages['result'])-1]['update_id']
         if messages and updatedId != self.lastUpdatedId:
+            newMessages = []
             for message in messages['result']:
                 if message['update_id'] > self.lastUpdatedId:
-                    self.app.interpret(message)
+                    newMessages.append(message)
             # store last update id
             self.lastUpdatedId = updatedId
             logging.debug('new last update id: ' + str(self.lastUpdatedId))
+            return newMessages
+        else:
+            return None
 
     def sendMessage(self, chatId, message):
         """Send message from bot to specific chat"""
-        self.sendRequest("sendMessage", chat_id=chatId, text=message)
+        return self.sendRequest("sendMessage", chat_id=chatId, text=message)
 
     def sendRequest(self, method, **kwargs):
-        """Sending requests to Telegram API and returns response"""
+        """Sends request on Telegram API and returns response"""
         data = urllib.parse.urlencode(kwargs)
         logging.debug('sending request: ' + self.apiUrl + method + '?' + data)
+        # TODO: exceptions
         try:
             request = urllib.request.urlopen(self.apiUrl + method + '?' + data)
         except urllib.error.URLError:
             logging.error('It looks like there are issues with connection')
             sys.exit(2)
-        return request.read().decode('utf-8')
+        response = request.read().decode('utf-8')
+        return JSONDecoder().decode(response)
 
 
 class Subscribers:
@@ -200,7 +199,7 @@ class Article:
         """Return last article"""
         return self.last
 
-    def update(self, article):
+    def updateArticle(self, article):
         """Update article when new one appears"""
         self.last = article
 
