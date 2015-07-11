@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 import time
 import http.client
@@ -108,10 +110,12 @@ class Connection:
         connection = http.client.HTTPSConnection("www.mujkaktus.cz")
         try:
             connection.request("GET", "/novinky")
+            response = connection.getresponse()
+            content = response.read().decode('utf-8')
         except socket.gaierror:
             logging.error("nepodarilo se nacist data z webove stranky")
-        response = connection.getresponse()
-        content = response.read().decode('utf-8')
+        except ConnectionResetError:
+            logging.error("nepodarilo se nacist data z webove stranky")
         return content
 
 
@@ -127,20 +131,21 @@ class Telegram:
 
     def update(self):
         """Load last messages sent to Bot, returns array with new messages"""
-        messages = self.sendRequest("getUpdates", offset=self.lastUpdatedId)
+        messages = self.sendRequest("getUpdates", offset=self.lastUpdatedId)['result']
         logging.debug('loaded ' + str(len(messages)) + ' messages in update')
-        updatedId = messages['result'][len(messages['result'])-1]['update_id']
-        if messages and updatedId != self.lastUpdatedId:
-            newMessages = []
-            for message in messages['result']:
-                if message['update_id'] > self.lastUpdatedId:
-                    newMessages.append(message)
-            # store last update id
-            self.lastUpdatedId = updatedId
-            logging.debug('new last update id: ' + str(self.lastUpdatedId))
-            return newMessages
-        else:
-            return None
+        if messages:
+            updatedId = messages[len(messages)-1]['update_id']
+            if updatedId != self.lastUpdatedId:
+                newMessages = []
+                for message in messages:
+                    if message['update_id'] >= self.lastUpdatedId:
+                        newMessages.append(message)
+                # store last update id
+                self.lastUpdatedId = updatedId + 1
+                logging.debug('new last update id: ' + str(self.lastUpdatedId))
+                return newMessages
+            else:
+                return None
 
     def sendMessage(self, chatId, message):
         """Send message from bot to specific chat"""
