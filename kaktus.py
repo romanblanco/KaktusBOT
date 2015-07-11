@@ -14,7 +14,6 @@ from threading import Thread
 
 DEBUG = False
 LOADING_TIME = 60*30
-RECEIVING_TIME = 2
 
 
 class Application:
@@ -54,11 +53,9 @@ class Application:
         logging.debug('starting receiving thread')
         while True:
             logging.debug('next iteration of receiving thread')
-            time.sleep(RECEIVING_TIME)
-            if self.bot.checkOnline():
-                response = self.bot.update()
-                if response is not None:
-                    self.interpret(response)
+            response = self.bot.update()
+            if response is not None:
+                self.interpret(response)
 
     def interpret(self, response):
         """From response recognize which action should be done"""
@@ -112,37 +109,34 @@ class Connection:
             connection.request("GET", "/novinky")
             response = connection.getresponse()
             content = response.read().decode('utf-8')
-        except socket.gaierror:
-            logging.error("nepodarilo se nacist data z webove stranky")
-        except ConnectionResetError:
-            logging.error("nepodarilo se nacist data z webove stranky")
+        except (socket.gaierror, ConnectionResetError) as e:
+            logging.error("error while loading data from website: " + e)
         return content
 
 
 class Telegram:
 
     def __init__(self, token):
-        self.lastUpdatedId = 0
+        self.offset = 0
         self.apiUrl = 'https://api.telegram.org/bot' + token + '/'
-
-    def checkOnline(self):
-        """From response decides if Bot connection with server is working"""
-        return self.sendRequest("getMe")['ok']
 
     def update(self):
         """Load last messages sent to Bot, returns array with new messages"""
-        messages = self.sendRequest("getUpdates", offset=self.lastUpdatedId)['result']
+        messages = self.sendRequest(
+            "getUpdates",
+            offset=self.offset,
+            timeout=300
+        )['result']
         logging.debug('loaded ' + str(len(messages)) + ' messages in update')
         if messages:
-            updatedId = messages[len(messages)-1]['update_id']
-            if updatedId != self.lastUpdatedId:
+            updatedId = messages[-1]['update_id']
+            if updatedId != self.offset + 1:
                 newMessages = []
                 for message in messages:
-                    if message['update_id'] >= self.lastUpdatedId:
-                        newMessages.append(message)
+                    newMessages.append(message)
                 # store last update id
-                self.lastUpdatedId = updatedId + 1
-                logging.debug('new last update id: ' + str(self.lastUpdatedId))
+                self.offset = updatedId + 1
+                logging.debug('new last update id: ' + str(self.offset))
                 return newMessages
             else:
                 return None
