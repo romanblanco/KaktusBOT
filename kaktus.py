@@ -24,17 +24,14 @@ class Application:
         self.article = Article()
         # start receiving thread
         self.threading = Thread(target=self.receivingThread)
-        logging.debug('setting thread as daemon')
         self.threading.daemon = True
-        logging.debug('starting thread as daemon')
         self.threading.start()
         # start main
-        logging.debug('continue with main')
         self.main()
 
     def main(self):
         while True:
-            logging.debug('next loading iteration')
+            logging.debug('next iteration of loading thread')
             source = Connection.loadSource()
             regex = "<h3.+?>(?:<a.+?>(.+?)<\/a>|(.+?))<\/h3>.+?" \
                     "<p>(?:<p>)?\s(.+?)<\/p>"
@@ -50,7 +47,6 @@ class Application:
 
     def receivingThread(self):
         """Thread that handles receiving messages"""
-        logging.debug('starting receiving thread')
         while True:
             logging.debug('next iteration of receiving thread')
             response = self.bot.update()
