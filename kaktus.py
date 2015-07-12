@@ -33,16 +33,17 @@ class Application:
         while True:
             logging.debug('next iteration of loading thread')
             source = Connection.loadSource()
-            regex = "<h3.+?>(?:<a.+?>(.+?)<\/a>|(.+?))<\/h3>.+?" \
-                    "<p>(?:<p>)?\s(.+?)<\/p>"
-            result = re.search(regex, source)
-            loadedArticle = (result.group(1) or result.group(2)) + ' ' \
-                + result.group(3)
-            logging.debug('loaded article: "' + loadedArticle + '"')
-            if self.article.new(loadedArticle):
-                self.article.updateArticle(loadedArticle)
-                for subscriber in self.subscribers.subscribersList():
-                    self.bot.sendMessage(int(subscriber), loadedArticle)
+            if source is not None:
+                regex = "<h3.+?>(?:<a.+?>(.+?)<\/a>|(.+?))<\/h3>.+?" \
+                        "<p>(?:<p>)?\s(.+?)<\/p>"
+                result = re.search(regex, source)
+                loadedArticle = (result.group(1) or result.group(2)) + ' ' \
+                    + result.group(3)
+                logging.debug('loaded article: "' + loadedArticle + '"')
+                if self.article.new(loadedArticle):
+                    self.article.updateArticle(loadedArticle)
+                    for subscriber in self.subscribers.subscribersList():
+                        self.bot.sendMessage(int(subscriber), loadedArticle)
             time.sleep(LOADING_TIME)
 
     def receivingThread(self):
@@ -104,7 +105,11 @@ class Connection:
         try:
             connection.request("GET", "/novinky")
             response = connection.getresponse()
-            content = response.read().decode('utf-8')
+            if response.status == 200:
+                return response.read().decode('utf-8')
+            else:
+                logging.error("bad response status: " + response.status)
+                return None
         except (socket.gaierror, ConnectionResetError) as e:
             logging.error("error while loading data from website: " + e)
         return content
@@ -223,7 +228,7 @@ def setLogging():
     """Logging configuration. For 'debug' mode set DEBUG constant to True"""
     # logging configuration
     logger = logging.getLogger()
-    logformat = '%(levelname)s:%(asctime)s (l.%(lineno)d) -- %(message)s\n'
+    logformat = '%(levelname)s:%(asctime)s (l.%(lineno)d) -- %(message)s'
     logger.setLevel(logging.DEBUG)
     # info log
     handler = logging.FileHandler('log.txt', 'w')
