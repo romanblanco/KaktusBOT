@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import time
 import http.client
@@ -164,25 +165,37 @@ class Subscribers:
     """Keep users IDs"""
 
     def __init__(self):
-        self.subscribers = []
+        if os.path.isfile('subscribers.lst'):
+            with open('subscribers.lst', 'r') as subscribersFile:
+                self.subscribers = subscribersFile.read().splitlines()
+        else:
+            self.subscribers = []
 
     def add(self, userId):
-        """Add user's ID to list of subscribers"""
+        """Add users ID to list of subscribers"""
         if str(userId) not in self.subscribers:
             self.subscribers.append(str(userId))
             logging.debug('new subscriber: ' + str(self.subscribers))
+            self.updateSubscribersFile()
             return True
         else:
             return False
 
     def remove(self, userId):
-        """Remove user's ID from list of subscribers"""
+        """Remove users ID from list of subscribers"""
         if str(userId) in self.subscribers:
             self.subscribers.remove(str(userId))
             logging.debug('one subscriber removed: ' + str(self.subscribers))
+            self.updateSubscribersFile()
             return True
         else:
             return False
+
+    def updateSubscribersFile(self):
+        """Write subscribers IDs to file on every change"""
+        subscribersFile = open('subscribers.lst', 'w')
+        for id in self.subscribers:
+            subscribersFile.write("%s\n" % id)
 
     def subscribersList(self):
         """Return list with all subscribers IDs"""
