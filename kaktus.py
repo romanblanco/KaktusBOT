@@ -38,8 +38,9 @@ class Application:
                 regex = "<h3.+?>(?:<a.+?>(.+?)<\/a>|(.+?))<\/h3>.+?" \
                         "<p>(?:<p>)?\s(.+?)<\/p>"
                 result = re.search(regex, source)
-                loadedArticle = (result.group(1) or result.group(2)) + ' ' \
-                    + result.group(3)
+                if result is not None:
+                    loadedArticle = (result.group(1) or result.group(2)) + ' ' \
+                        + result.group(3)
                 logging.debug('loaded article: "' + loadedArticle + '"')
                 if self.article.new(loadedArticle):
                     self.article.updateArticle(loadedArticle)
@@ -109,7 +110,7 @@ class Connection:
             if response.status == 200:
                 return response.read().decode('utf-8')
             else:
-                logging.error("bad response status: " + response.status)
+                logging.error("bad response status: " + str(response.status))
                 return None
         except (socket.gaierror, ConnectionResetError) as e:
             logging.error("error while loading data from website: " + e)
@@ -124,24 +125,26 @@ class Telegram:
 
     def update(self):
         """Load last messages sent to Bot, returns array with new messages"""
-        messages = self.sendRequest(
+        requestResult = self.sendRequest(
             "getUpdates",
             offset=self.offset,
             timeout=300
-        )['result']
-        logging.debug('loaded ' + str(len(messages)) + ' messages in update')
-        if messages:
-            updatedId = messages[-1]['update_id']
-            if updatedId != self.offset + 1:
-                newMessages = []
-                for message in messages:
-                    newMessages.append(message)
-                # store last update id
-                self.offset = updatedId + 1
-                logging.debug('new last update id: ' + str(self.offset))
-                return newMessages
-            else:
-                return None
+        )
+        if requestResult is not None:
+            messages = requestResult['result']
+            logging.debug('loaded ' + str(len(messages)) + ' messages')
+            if messages:
+                updatedId = messages[-1]['update_id']
+                if updatedId != self.offset + 1:
+                    newMessages = []
+                    for message in messages:
+                        newMessages.append(message)
+                    # store last update id
+                    self.offset = updatedId + 1
+                    logging.debug('new last update id: ' + str(self.offset))
+                    return newMessages
+                else:
+                    return None
 
     def sendMessage(self, chatId, message):
         """Send message from bot to specific chat"""
@@ -154,11 +157,11 @@ class Telegram:
         # TODO: exceptions
         try:
             request = urllib.request.urlopen(self.apiUrl + method + '?' + data)
+            response = request.read().decode('utf-8')
+            return JSONDecoder().decode(response)
         except urllib.error.URLError:
             logging.error('It looks like there are issues with connection')
-            sys.exit(2)
-        response = request.read().decode('utf-8')
-        return JSONDecoder().decode(response)
+            return None
 
 
 class Subscribers:
