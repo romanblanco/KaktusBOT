@@ -12,6 +12,7 @@ import logging
 import signal
 from json import JSONDecoder
 from threading import Thread
+from bs4 import BeautifulSoup
 
 DEBUG = False
 LOADING_TIME = 60*30
@@ -35,12 +36,14 @@ class Application:
             logging.debug('next iteration of loading thread')
             source = Connection.loadSource()
             if source is not None:
-                regex = "<h3.+?>(?:<a.+?>(.+?)<\/a>|(.+?))<\/h3>.+?" \
-                        "<p>(?:<p>)?\s(.+?)<\/p>"
-                result = re.search(regex, source)
-                if result is not None:
-                    loadedArticle = (result.group(1) or result.group(2)) + ' ' \
-                        + result.group(3)
+                soup = BeautifulSoup(source, 'html.parser')
+                articles = soup.find_all("div",
+                                         class_="journal-content-article")
+
+                news = [(article.h3.get_text(),
+                         article.p.get_text()) for article in articles]
+                header, paragraph = news[0]
+                loadedArticle = header + " — " + paragraph
                 logging.debug('loaded article: "' + loadedArticle + '"')
                 if self.article.new(loadedArticle):
                     self.article.updateArticle(loadedArticle)
