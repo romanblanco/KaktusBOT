@@ -61,7 +61,11 @@ class Application:
                 self.interpret(response)
 
     def interpret(self, response):
-        """From response recognize which action should be done"""
+        """From response recognize which action should be done
+
+        Args:
+            - response -- Array of messages sent to the Bot
+        """
         logging.debug('interpreting response: ' + str(response))
         for message in response:
             if 'text' in message['message'].keys():
@@ -73,7 +77,12 @@ class Application:
                     self.showLast(message['message']['from']['id'])
 
     def addSubscriber(self, userId):
-        """Add new subscriber to list"""
+        """Add new subscriber to list
+
+        Args:
+            - userId -- id of the user who sent the request to be added to the
+                        subscribers list
+        """
         if self.subscribers.add(userId):
             self.bot.sendMessage(
                 userId,
@@ -84,7 +93,12 @@ class Application:
                 "You are already subscribing news from Kaktus operator")
 
     def removeSubscriber(self, userId):
-        """Remove subscriber from list"""
+        """Remove subscriber from list
+
+        Args:
+            - userId -- id of the user who sent the request to be removed
+                        from subscribers list
+        """
         if self.subscribers.remove(userId):
             self.bot.sendMessage(
                 userId,
@@ -95,7 +109,12 @@ class Application:
                 "You weren't subscribing news from Kaktus operator")
 
     def showLast(self, userId):
-        """Show newest article"""
+        """Sends newest article to user who sent the request
+
+        Args:
+            - userId -- id of the user who sent the request to show last
+                        article
+        """
         if self.article.lastArticle() != '':
             self.bot.sendMessage(userId, self.article.lastArticle())
         else:
@@ -106,7 +125,12 @@ class Connection:
     """Loading website source"""
 
     def loadSource():
-        """Load source of page with news"""
+        """Load source of page with news
+
+        Returns:
+            - Page source code, if request succeeds
+            - None if request fails
+        """
         connection = http.client.HTTPSConnection("www.mujkaktus.cz")
         try:
             connection.request("GET", "/novinky")
@@ -127,8 +151,34 @@ class Telegram:
         self.offset = 0
         self.apiUrl = 'https://api.telegram.org/bot' + token + '/'
 
+    def sendRequest(self, method, **kwargs):
+        """Sends request on Telegram API and returns response
+
+        Args:
+            - method -- request method
+            - kwargs -- request specific arguments
+
+        Returns:
+            - JSON Object with messages, if request succeeds
+            - None, if request fails
+        """
+        data = urllib.parse.urlencode(kwargs)
+        logging.debug('sending request: ' + self.apiUrl + method + '?' + data)
+        try:
+            request = urllib.request.urlopen(self.apiUrl + method + '?' + data)
+            response = request.read().decode('utf-8')
+            return JSONDecoder().decode(response)
+        except urllib.error.URLError:
+            logging.error('It looks like there are issues with connection')
+            return None
+
     def update(self):
-        """Load last messages sent to Bot, returns array with new messages"""
+        """Load last messages sent to Bot, returns array with new messages
+
+        Returns:
+            - Array with new messages if request succeeds
+            - None if request fails or if there is no new message
+        """
         requestResult = self.sendRequest(
             "getUpdates",
             offset=self.offset,
@@ -143,7 +193,7 @@ class Telegram:
                     newMessages = []
                     for message in messages:
                         newMessages.append(message)
-                    # store last update id
+                    # store last update id as next offset
                     self.offset = updatedId + 1
                     logging.debug('new last update id: ' + str(self.offset))
                     return newMessages
@@ -151,27 +201,20 @@ class Telegram:
                     return None
 
     def sendMessage(self, chatId, message):
-        """Send message from bot to specific chat"""
-        return self.sendRequest("sendMessage", chat_id=chatId, text=message)
+        """Send message from bot to specific chat
 
-    def sendRequest(self, method, **kwargs):
-        """Sends request on Telegram API and returns response"""
-        data = urllib.parse.urlencode(kwargs)
-        logging.debug('sending request: ' + self.apiUrl + method + '?' + data)
-        # TODO: exceptions
-        try:
-            request = urllib.request.urlopen(self.apiUrl + method + '?' + data)
-            response = request.read().decode('utf-8')
-            return JSONDecoder().decode(response)
-        except urllib.error.URLError:
-            logging.error('It looks like there are issues with connection')
-            return None
+        Args:
+            - chatId -- message receivers ID
+            - message -- message sent to the reciever
+        """
+        return self.sendRequest("sendMessage", chat_id=chatId, text=message)
 
 
 class Subscribers:
     """Keep users IDs"""
 
     def __init__(self):
+        """Load subscribers IDs from file or start a new list"""
         if os.path.isfile('subscribers.lst'):
             with open('subscribers.lst', 'r') as subscribersFile:
                 self.subscribers = subscribersFile.read().splitlines()
@@ -179,7 +222,15 @@ class Subscribers:
             self.subscribers = []
 
     def add(self, userId):
-        """Add users ID to list of subscribers"""
+        """Add users ID to list of subscribers
+
+        Args:
+            - userId -- new subscribers ID
+
+        Returns:
+            - True if the user was added to subscribers list
+            - False if user is already a subscriber
+        """
         if str(userId) not in self.subscribers:
             self.subscribers.append(str(userId))
             logging.debug('new subscriber: ' + str(self.subscribers))
@@ -189,7 +240,15 @@ class Subscribers:
             return False
 
     def remove(self, userId):
-        """Remove users ID from list of subscribers"""
+        """Remove users ID from list of subscribers
+
+        Args:
+            - userId -- leaving subscribers ID
+
+        Returns:
+            - True if the user was removed from subscribers list
+            - False if user was not subscriber
+        """
         if str(userId) in self.subscribers:
             self.subscribers.remove(str(userId))
             logging.debug('one subscriber removed: ' + str(self.subscribers))
@@ -216,15 +275,32 @@ class Article:
         self.last = ''
 
     def lastArticle(self):
-        """Return last article"""
+        """Return last article
+
+        Returns:
+            - Last stored article if there was any
+            - Empty string if there was not any article stored yet
+        """
         return self.last
 
     def updateArticle(self, article):
-        """Update article when new one appears"""
+        """Update article when new one appears
+
+        Args:
+            - article -- loaded article to be stored
+        """
         self.last = article
 
     def new(self, article):
-        """Compare if loaded article is new or not"""
+        """Compare if loaded article is new or not
+
+        Args:
+            - article -- loaded article to be compared
+
+        Returns:
+            - True if the article is different than the stored one
+            - False if the article is the same as the stored one
+        """
         return (article != self.last)
 
 
@@ -239,7 +315,7 @@ class LogFilter:
 
 
 def signal_handler(signal, frame):
-    """Pri zachyceni signalu ukonci skript"""
+    """Exits script after catching SIGINT signal"""
     print("\nBye bye...")
     sys.exit(0)
 
