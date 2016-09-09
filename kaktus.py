@@ -118,7 +118,7 @@ class Connection:
                 return None
         except (socket.gaierror, ConnectionResetError) as e:
             logging.error("error while loading data from website: " + e)
-        return content
+            return None
 
 
 class Telegram:
