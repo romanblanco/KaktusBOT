@@ -42,13 +42,14 @@ class Application:
 
                 news = [(article.h3.get_text(),
                          article.p.get_text()) for article in articles]
-                header, paragraph = news[0]
-                loadedArticle = header + " — " + paragraph
-                logging.debug('loaded article: "' + loadedArticle + '"')
-                if self.article.new(loadedArticle):
-                    self.article.updateArticle(loadedArticle)
-                    for subscriber in self.subscribers.subscribersList():
-                        self.bot.sendMessage(int(subscriber), loadedArticle)
+                if len(news):
+                    header, paragraph = news[0]
+                    loadedArticle = header + " — " + paragraph
+                    logging.debug('loaded article: "' + loadedArticle + '"')
+                    if self.article.new(loadedArticle):
+                        self.article.updateArticle(loadedArticle)
+                        for subscriber in self.subscribers.subscribersList():
+                            self.bot.sendMessage(int(subscriber), loadedArticle)
             time.sleep(LOADING_TIME)
 
     def receivingThread(self):
