@@ -199,6 +199,8 @@ class Telegram:
                     return newMessages
                 else:
                     return None
+        else:
+            return None
 
     def sendMessage(self, chatId, message):
         """Send message from bot to specific chat
