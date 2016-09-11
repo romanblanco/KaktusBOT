@@ -37,26 +37,27 @@ class Application:
             source = Connection.loadSource()
             if source is not None:
                 soup = BeautifulSoup(source, 'html.parser')
-                articles = soup.find_all("div",
-                                         class_="journal-content-article")
-
                 news = [(article.h3.get_text(),
-                         article.p.get_text()) for article in articles]
-                if len(news):
-                    header, paragraph = news[0]
-                    loadedArticle = header + " — " + paragraph
-                    logging.debug('loaded article: "' + loadedArticle + '"')
-                    if self.article.new(loadedArticle):
-                        self.article.updateArticle(loadedArticle)
-                        for subscriber in self.subscribers.subscribersList():
-                            self.bot.sendMessage(int(subscriber), loadedArticle)
+                         article.p.get_text()) for article in soup.find_all(
+                           'div',
+                           class_='journal-content-article')]
+            else:
+                news = []
+            if len(news):
+                header, paragraph = news[0]
+                loadedArticle = header + ' — ' + paragraph
+                logging.debug("loaded article: \"" + loadedArticle + "\"")
+                if self.article.new(loadedArticle):
+                    self.article.updateArticle(loadedArticle)
+                    for subscriber in self.subscribers.subscribersList:
+                        self.bot.sendMessage(int(subscriber), loadedArticle)
             time.sleep(LOADING_TIME)
 
     def receivingThread(self):
         """Thread that handles receiving messages"""
         while True:
-            logging.debug('next iteration of receiving thread')
-            response = self.bot.update()
+            logging.debug("next iteration of receiving thread")
+            response = self.bot.receiveMessages()
             if response is not None:
                 self.interpret(response)
 
@@ -115,8 +116,8 @@ class Application:
             - userId -- id of the user who sent the request to show last
                         article
         """
-        if self.article.lastArticle() != '':
-            self.bot.sendMessage(userId, self.article.lastArticle())
+        if self.article.last != '':
+            self.bot.sendMessage(userId, self.article.last)
         else:
             self.bot.sendMessage(userId, "No articles loaded yet.")
 
@@ -172,7 +173,7 @@ class Telegram:
             logging.error('It looks like there are issues with connection')
             return None
 
-    def update(self):
+    def receiveMessages(self):
         """Load last messages sent to Bot, returns array with new messages
 
         Returns:
@@ -180,10 +181,9 @@ class Telegram:
             - None if request fails or if there is no new message
         """
         requestResult = self.sendRequest(
-            "getUpdates",
+            'getUpdates',
             offset=self.offset,
-            timeout=300
-        )
+            timeout=300)
         if requestResult is not None:
             messages = requestResult['result']
             logging.debug('loaded ' + str(len(messages)) + ' messages')
@@ -219,9 +219,9 @@ class Subscribers:
         """Load subscribers IDs from file or start a new list"""
         if os.path.isfile('subscribers.lst'):
             with open('subscribers.lst', 'r') as subscribersFile:
-                self.subscribers = subscribersFile.read().splitlines()
+                self.subscribersList = subscribersFile.read().splitlines()
         else:
-            self.subscribers = []
+            self.subscribersList = []
 
     def add(self, userId):
         """Add users ID to list of subscribers
@@ -233,9 +233,9 @@ class Subscribers:
             - True if the user was added to subscribers list
             - False if user is already a subscriber
         """
-        if str(userId) not in self.subscribers:
-            self.subscribers.append(str(userId))
-            logging.debug('new subscriber: ' + str(self.subscribers))
+        if str(userId) not in self.subscribersList:
+            self.subscribersList.append(str(userId))
+            logging.debug("new subscriber: " + str(self.subscribersList))
             self.updateSubscribersFile()
             return True
         else:
@@ -251,9 +251,11 @@ class Subscribers:
             - True if the user was removed from subscribers list
             - False if user was not subscriber
         """
-        if str(userId) in self.subscribers:
-            self.subscribers.remove(str(userId))
-            logging.debug('one subscriber removed: ' + str(self.subscribers))
+        if str(userId) in self.subscribersList:
+            self.subscribersList.remove(str(userId))
+            logging.debug(
+              "one subscriber removed: " +
+              str(self.subscribersList))
             self.updateSubscribersFile()
             return True
         else:
@@ -262,12 +264,8 @@ class Subscribers:
     def updateSubscribersFile(self):
         """Write subscribers IDs to file on every change"""
         subscribersFile = open('subscribers.lst', 'w')
-        for id in self.subscribers:
-            subscribersFile.write("%s\n" % id)
-
-    def subscribersList(self):
-        """Return list with all subscribers IDs"""
-        return self.subscribers
+        for id in self.subscribersList:
+            subscribersFile.write('%s\n' % id)
 
 
 class Article:
@@ -275,15 +273,6 @@ class Article:
 
     def __init__(self):
         self.last = ''
-
-    def lastArticle(self):
-        """Return last article
-
-        Returns:
-            - Last stored article if there was any
-            - Empty string if there was not any article stored yet
-        """
-        return self.last
 
     def updateArticle(self, article):
         """Update article when new one appears
