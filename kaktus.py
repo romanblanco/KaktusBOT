@@ -33,7 +33,7 @@ class Application:
 
     def main(self):
         while True:
-            logging.debug('next iteration of loading thread')
+            logging.debug("next iteration of loading thread")
             source = Connection.loadSource()
             if source is not None:
                 soup = BeautifulSoup(source, 'html.parser')
@@ -67,14 +67,14 @@ class Application:
         Args:
             - response -- Array of messages sent to the Bot
         """
-        logging.debug('interpreting response: ' + str(response))
+        logging.debug("interpreting response: " + str(response))
         for message in response:
             if 'text' in message['message'].keys():
-                if message['message']['text'] == "/subscribe":
+                if message['message']['text'] == '/subscribe':
                     self.addSubscriber(message['message']['from']['id'])
-                elif message['message']['text'] == "/unsubscribe":
+                elif message['message']['text'] == '/unsubscribe':
                     self.removeSubscriber(message['message']['from']['id'])
-                elif message['message']['text'] == "/last":
+                elif message['message']['text'] == '/last':
                     self.showLast(message['message']['from']['id'])
 
     def addSubscriber(self, userId):
@@ -132,9 +132,9 @@ class Connection:
             - Page source code, if request succeeds
             - None if request fails
         """
-        connection = http.client.HTTPSConnection("www.mujkaktus.cz")
+        connection = http.client.HTTPSConnection('www.mujkaktus.cz')
         try:
-            connection.request("GET", "/novinky")
+            connection.request('GET', '/novinky')
             response = connection.getresponse()
             if response.status == 200:
                 return response.read().decode('utf-8')
@@ -164,13 +164,13 @@ class Telegram:
             - None, if request fails
         """
         data = urllib.parse.urlencode(kwargs)
-        logging.debug('sending request: ' + self.apiUrl + method + '?' + data)
+        logging.debug("sending request: " + self.apiUrl + method + "?" + data)
         try:
             request = urllib.request.urlopen(self.apiUrl + method + '?' + data)
             response = request.read().decode('utf-8')
             return JSONDecoder().decode(response)
         except urllib.error.URLError:
-            logging.error('It looks like there are issues with connection')
+            logging.error("It looks like there are issues with connection")
             return None
 
     def receiveMessages(self):
@@ -195,7 +195,7 @@ class Telegram:
                         newMessages.append(message)
                     # store last update id as next offset
                     self.offset = updatedId + 1
-                    logging.debug('new last update id: ' + str(self.offset))
+                    logging.debug("new last update id: " + str(self.offset))
                     return newMessages
                 else:
                     return None
@@ -209,7 +209,7 @@ class Telegram:
             - chatId -- message receivers ID
             - message -- message sent to the reciever
         """
-        return self.sendRequest("sendMessage", chat_id=chatId, text=message)
+        return self.sendRequest('sendMessage', chat_id=chatId, text=message)
 
 
 class Subscribers:
