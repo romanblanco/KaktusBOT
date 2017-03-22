@@ -141,8 +141,8 @@ class Connection:
             else:
                 logging.error("bad response status: " + str(response.status))
                 return None
-        except (socket.gaierror, ConnectionResetError) as e:
-            logging.error("error while loading data from website: " + e)
+        except Exception as e:
+            logging.error("error while loading data from website: ", e)
             return None
 
 
