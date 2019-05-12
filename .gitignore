@@ -1,0 +1,7 @@
+TOKEN
+error_log.txt
+__pycache__
+log.txt
+feed.sqlite
+subscriber.sqlite
+delivery.sqlite
