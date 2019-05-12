@@ -17,7 +17,7 @@ LOADING_TIME = 60*30
 class Application:
 
     def __init__(self):
-        self.bot = Telegram(" --- YOUR TELEGRAM BOT TOKEN --- ")
+        self.bot = Telegram()
         self.subscribers = Subscribers()
         self.article = Article()
         # start receiving thread

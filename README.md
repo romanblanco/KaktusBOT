@@ -4,6 +4,8 @@ Telegram bot notifying about news from mobile operator [Kaktus](https://www.mujk
 
 ```sh
 pip install -r requirements.txt --user
+echo "TELEGRAM:TOKEN" > ./TOKEN
+./kaktus.py
 ```
 
 [Give it a try!](https://telegram.me/KaktusBot)

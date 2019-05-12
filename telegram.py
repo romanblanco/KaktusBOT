@@ -1,3 +1,4 @@
+import sys
 import urllib.parse
 import urllib.request
 
@@ -7,9 +8,16 @@ import logging
 
 class Telegram:
 
-    def __init__(self, token):
+    def __init__(self):
         self.offset = 0
-        self.apiUrl = 'https://api.telegram.org/bot' + token + '/'
+        try:
+            with open('TOKEN', 'r', encoding='utf-8') as token_file:
+                token = token_file.read().splitlines()[0]
+                self.apiUrl = 'https://api.telegram.org/bot' + token + '/'
+        except FileNotFoundError:
+            print("\n./TOKEN file containing Telegram token does not exist")
+            sys.exit(1)
+
 
     def sendRequest(self, method, **kwargs):
         """Sends request on Telegram API and returns response
