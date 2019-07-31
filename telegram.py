@@ -6,18 +6,17 @@ from json import JSONDecoder
 
 import logging
 
-class Telegram:
 
+class Telegram:
     def __init__(self):
         self.offset = 0
         try:
-            with open('TOKEN', 'r', encoding='utf-8') as token_file:
+            with open("TOKEN", "r", encoding="utf-8") as token_file:
                 token = token_file.read().splitlines()[0]
-                self.apiUrl = 'https://api.telegram.org/bot' + token + '/'
+                self.apiUrl = "https://api.telegram.org/bot" + token + "/"
         except FileNotFoundError:
             print("\n./TOKEN file containing Telegram token does not exist")
             sys.exit(1)
-
 
     def sendRequest(self, method, **kwargs):
         """Sends request on Telegram API and returns response
@@ -33,8 +32,8 @@ class Telegram:
         data = urllib.parse.urlencode(kwargs)
         logging.debug("sending request: " + self.apiUrl + method + "?" + data)
         try:
-            request = urllib.request.urlopen(self.apiUrl + method + '?' + data)
-            response = request.read().decode('utf-8')
+            request = urllib.request.urlopen(self.apiUrl + method + "?" + data)
+            response = request.read().decode("utf-8")
             return JSONDecoder().decode(response)
         except urllib.error.URLError:
             logging.error("It looks like there are issues with connection")
@@ -48,14 +47,12 @@ class Telegram:
             - None if request fails or if there is no new message
         """
         requestResult = self.sendRequest(
-            'getUpdates',
-            offset=self.offset,
-            timeout=300)
+                "getUpdates", offset=self.offset, timeout=300)
         if requestResult is not None:
-            messages = requestResult['result']
-            logging.debug('loaded ' + str(len(messages)) + ' messages')
+            messages = requestResult["result"]
+            logging.debug("loaded " + str(len(messages)) + " messages")
             if messages:
-                updatedId = messages[-1]['update_id']
+                updatedId = messages[-1]["update_id"]
                 if updatedId != self.offset + 1:
                     newMessages = []
                     for message in messages:
@@ -76,4 +73,4 @@ class Telegram:
             - chatId -- message receivers ID
             - message -- message sent to the reciever
         """
-        return self.sendRequest('sendMessage', chat_id=chatId, text=message)
+        return self.sendRequest("sendMessage", chat_id=chatId, text=message)
