@@ -5,16 +5,16 @@ import logging
 class Connection:
     """Loading website source"""
 
-    def loadSource():
+    def loadSource(domain, path):
         """Load source of page with news
 
         Returns:
             - Page source code, if request succeeds
             - None if request fails
         """
-        connection = http.client.HTTPSConnection("www.mujkaktus.cz")
+        connection = http.client.HTTPSConnection(domain)
         try:
-            connection.request("GET", "/novinky")
+            connection.request("GET", path)
             response = connection.getresponse()
             if response.status == 200:
                 return response.read().decode("utf-8")

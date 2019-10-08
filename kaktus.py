@@ -74,7 +74,7 @@ class Application:
     def main(self):
         while True:
             logging.debug("next iteration of loading thread")
-            source = Connection.loadSource()
+            source = Connection.loadSource("www.mujkaktus.cz", "/novinky")
             if source is not None:
                 soup = BeautifulSoup(source, "html.parser")
                 news = [
