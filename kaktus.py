@@ -8,9 +8,9 @@ import signal
 from threading import Thread
 from bs4 import BeautifulSoup
 
-from connection import Connection
-from telegram import Telegram
-from database import Subscribers, Article, Postman
+from lib.connection import Connection
+from lib.telegram import Telegram
+from lib.database import Subscribers, Article, Postman
 
 DEBUG = True
 LOADING_TIME = 60 * 30

@@ -54,7 +54,7 @@ class Subscribers:
         return find.scalar()
 
     def add(self, userId):
-        session = dbSession("sqlite:///subscriber.sqlite")
+        session = dbSession("sqlite:///data/subscriber.sqlite")
         if self.exists(session, userId):
             session.close()
             return False
@@ -66,7 +66,7 @@ class Subscribers:
             return True
 
     def remove(self, userId):
-        session = dbSession("sqlite:///subscriber.sqlite")
+        session = dbSession("sqlite:///data/subscriber.sqlite")
         if self.exists(session, userId):
             session.query(Subscriber).filter(Subscriber.telegram_id==userId).delete()
 
@@ -78,13 +78,13 @@ class Subscribers:
             return False
 
     def all(self):
-        session = dbSession("sqlite:///subscriber.sqlite")
+        session = dbSession("sqlite:///data/subscriber.sqlite")
         return session.query(Subscriber).all()
 
 class Article:
 
     def __init__(self):
-        session = dbSession("sqlite:///feed.sqlite")
+        session = dbSession("sqlite:///data/feed.sqlite")
         query = session.query(Feed).order_by(Feed.date.desc()).first()
         session.close()
         if query is not None:
@@ -101,7 +101,7 @@ class Article:
             - True if the article has been added
             - False if the article is already present
         """
-        session = dbSession("sqlite:///feed.sqlite")
+        session = dbSession("sqlite:///data/feed.sqlite")
         if self.exists(session, article):
             session.close()
             return None
@@ -132,7 +132,7 @@ class Article:
 class Postman:
 
     def add(self, message, subscriber):
-        session = dbSession("sqlite:///delivery.sqlite")
+        session = dbSession("sqlite:///data/delivery.sqlite")
         if self.exists(session, message, subscriber):
             session.close()
             return None
